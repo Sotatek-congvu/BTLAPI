@@ -1,93 +1,102 @@
-
 import { apiService } from './api';
 
-export interface Message {
-  id: number;
-  content: string;
-  isUser: boolean;
-  timestamp: string;
+export interface ChatMessage {
+  FromUser: boolean;
+  Message: string;
 }
 
-export interface ConversationHistory {
-  id: string;
-  messages: Message[];
-  createdAt: string;
-  updatedAt: string;
+export interface ChatRequest {
+  ChatHistory: ChatMessage[];
+  Question: string;
+  ImagesAsBase64: string[] | null;
 }
 
-export interface ApiResponse<T> {
-  data: T;
+export interface ChatResponse {
+  data: string;
   message: string;
   status: number;
   success: boolean;
 }
 
-export const consultationService = {
-  // Send a message and get a response
-  sendMessage: async (content: string): Promise<Message> => {
+export const chatService = {
+  // Send a message to the chatbot and get a response
+  generateAnswer: async (
+    request: ChatRequest,
+    username: string,
+    gender: string,
+    age: number,
+    englishLevel: number,
+    enableReasoning: boolean = false,
+    enableSearching: boolean = false
+  ): Promise<string> => {
     try {
-      // Get the raw response first
-      const response = await fetch(`${apiService.getBaseUrl()}/api/Consultation/Message`, {
-        method: 'POST',
-        headers: apiService.getHeaders(),
-        body: JSON.stringify({ content })
+      // Construct the query parameters
+      const params = new URLSearchParams({
+        username,
+        gender,
+        age: age.toString(),
+        englishLevel: englishLevel.toString(),
+        enableReasoning: enableReasoning.toString(),
+        enableSearching: enableSearching.toString()
       });
-      
+
+      // Get the raw response
+      const response = await fetch(`${apiService.getBaseUrl()}/api/Chatbot/GenerateAnswer?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...apiService.getHeaders()
+        },
+        body: JSON.stringify(request)
+      });
+
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
       }
-      
-      // Check the content type to determine how to process the response
+
+      // Handle the response
       const contentType = response.headers.get('content-type');
-      
+
       if (contentType && contentType.includes('application/json')) {
-        // If it's JSON, parse it as JSON
+        // If it's JSON, parse it
         const jsonData = await response.json();
         return jsonData.data || jsonData;
       } else {
-        // If it's not JSON, throw an error since we expect a Message object
-        throw new Error('Unexpected response format');
+        // If it's text, return it directly
+        return await response.text();
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error generating answer:', error);
       throw error;
     }
   },
-  
-  // Get conversation history
-  getConversationHistory: async (): Promise<ConversationHistory[]> => {
+
+  // Save conversation to localStorage for persistence
+  saveConversation: (messages: ChatMessage[]): void => {
     try {
-      const response = await apiService.get<ApiResponse<ConversationHistory[]>>('/api/Consultation/History');
-      return (response as ApiResponse<ConversationHistory[]>).data || [];
+      localStorage.setItem('chat_history', JSON.stringify(messages));
     } catch (error) {
-      console.error('Error fetching conversation history:', error);
-      throw error;
+      console.error('Error saving conversation to localStorage:', error);
     }
   },
-  
-  // Clear conversation
-  clearConversation: async (): Promise<{ success: boolean }> => {
+
+  // Load conversation from localStorage
+  loadConversation: (): ChatMessage[] => {
     try {
-      const response = await apiService.delete<ApiResponse<{ success: boolean }>>(
-        '/api/Consultation/Clear'
-      );
-      return (response as ApiResponse<{ success: boolean }>).data || { success: true };
+      const savedMessages = localStorage.getItem('chat_history');
+      return savedMessages ? JSON.parse(savedMessages) : [];
     } catch (error) {
-      console.error('Error clearing conversation:', error);
-      throw error;
+      console.error('Error loading conversation from localStorage:', error);
+      return [];
     }
   },
-  
-  // Get conversation by ID
-  getConversationById: async (conversationId: string): Promise<ConversationHistory> => {
+
+  // Clear conversation from localStorage
+  clearConversation: (): void => {
     try {
-      const response = await apiService.get<ApiResponse<ConversationHistory>>(
-        `/api/Consultation/History/${conversationId}`
-      );
-      return (response as ApiResponse<ConversationHistory>).data;
+      localStorage.removeItem('chat_history');
     } catch (error) {
-      console.error('Error fetching conversation:', error);
-      throw error;
+      console.error('Error clearing conversation from localStorage:', error);
     }
   }
 };

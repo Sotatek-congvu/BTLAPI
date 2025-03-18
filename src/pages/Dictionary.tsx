@@ -1,60 +1,28 @@
-
-import React, { useState, useEffect } from 'react';
-import { BookText, Search, Star, History } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookText, Search, Star } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
-import { dictionaryService, SearchHistoryItem } from '@/services/dictionaryService';
+import { dictionaryService } from '@/services/dictionaryService';
 import { useApi } from '@/hooks/use-api';
 
 const Dictionary: React.FC = () => {
   const navigate = useNavigate();
   const { error } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  
-  const { isLoading, request } = useApi();
 
-  // Fetch recent searches on component mount
-  useEffect(() => {
-    const fetchRecentSearches = async () => {
-      try {
-        const history = await request(
-          () => dictionaryService.getSearchHistory(),
-          {
-            skipToast: true,
-            errorMessage: "Không thể lấy lịch sử tìm kiếm"
-          }
-        );
-        
-        if (history) {
-          const terms = (history as SearchHistoryItem[]).map(item => item.word);
-          setRecentSearches(terms);
-        } else {
-          // Fallback mock data
-          setRecentSearches(['hello', 'beat around the bush', 'spontaneous', 'come across', 'innovative']);
-        }
-      } catch (err) {
-        console.error('Error fetching search history:', err);
-        // Fallback to mock data if API fails
-        setRecentSearches(['hello', 'beat around the bush', 'spontaneous', 'come across', 'innovative']);
-      }
-    };
-    
-    fetchRecentSearches();
-  }, [request]);
+  const { isLoading, request } = useApi();
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+
     if (!searchTerm.trim()) {
       error('Vui lòng nhập từ cần tra cứu', 'Bạn chưa nhập từ hoặc cụm từ để tra cứu');
       return;
     }
-    
+
     try {
       // Attempt to fetch the word definition
       const wordResult = await request(
@@ -63,7 +31,7 @@ const Dictionary: React.FC = () => {
           skipToast: true,
         }
       );
-      
+
       if (wordResult) {
         // If successful, navigate to the result page
         navigate(`/dictionary/result?keyword=${encodeURIComponent(searchTerm.trim())}`);
@@ -81,7 +49,7 @@ const Dictionary: React.FC = () => {
       if (!word.trim()) {
         return;
       }
-      
+
       await request(
         () => dictionaryService.addToFavorites(word),
         {
@@ -103,7 +71,7 @@ const Dictionary: React.FC = () => {
             <BookText size={48} color="white" />
           </div>
         </div>
-        
+
         <h1 className="text-4xl font-bold text-center mb-2 dark:text-white">TỪ ĐIỂN</h1>
         <p className="text-center text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
           Tra cứu từ vựng với định nghĩa chi tiết, ví dụ thực tế và gợi ý sử dụng trong nhiều ngữ
@@ -119,13 +87,13 @@ const Dictionary: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={isLoading}
             />
-            <Star 
-              className="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-engace-purple cursor-pointer" 
-              size={20} 
+            <Star
+              className="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-engace-purple cursor-pointer"
+              size={20}
               onClick={() => handleAddToFavorites(searchTerm)}
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-transparent hover:bg-transparent dark:text-gray-300"
               disabled={isLoading}
             >
@@ -134,32 +102,8 @@ const Dictionary: React.FC = () => {
           </div>
         </form>
 
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="flex items-center mb-4">
-            <History size={16} className="text-gray-500 dark:text-gray-400 mr-2" />
-            <h3 className="text-md font-medium dark:text-gray-300">Gợi ý tra cứu</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {recentSearches.map((term, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className="rounded-full border-gray-300 hover:border-engace-blue hover:bg-blue-50 text-gray-700 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                onClick={() => {
-                  setSearchTerm(term);
-                  // Automatically search after a short delay
-                  setTimeout(() => handleSearch(), 100);
-                }}
-                disabled={isLoading}
-              >
-                {term}
-              </Button>
-            ))}
-          </div>
-        </div>
-
         <div className="max-w-2xl mx-auto">
-          <Button 
+          <Button
             onClick={handleSearch}
             className="w-full py-6 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl flex items-center justify-center gap-2 text-lg"
             disabled={isLoading}

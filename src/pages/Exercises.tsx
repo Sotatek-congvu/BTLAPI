@@ -1,157 +1,354 @@
-
-import React, { useState } from 'react';
-import { GraduationCap, ArrowLeft, Clock, ArrowRight, Copy, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GraduationCap, ArrowLeft, Clock, ArrowRight, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { exerciseService, ExerciseParams, Question, ExerciseSet } from '@/services/exerciseService';
+import {
+  exerciseService,
+  ExerciseGenerationParams,
+  ExerciseSet,
+  Question,
+  AssignmentType
+} from '@/services/exerciseService';
+
+// Suggested topics
+const suggestedTopics = [
+  "Colors around me",
+  "Animals I see",
+  "Places nearby",
+  "Clothes I wear",
+  "Family members"
+];
+
+// Question type options
+interface QuestionTypeOption {
+  value: AssignmentType;
+  label: string;
+  description: string;
+}
+
+const questionTypeOptions: QuestionTypeOption[] = [
+  {
+    value: AssignmentType.MostSuitableWord,
+    label: "Most Suitable Word",
+    description: "Chọn từ thích hợp nhất"
+  },
+  {
+    value: AssignmentType.VerbConjugation,
+    label: "Verb Conjugation",
+    description: "Chia động từ"
+  },
+  {
+    value: AssignmentType.ConditionalSentences,
+    label: "Conditional Sentences",
+    description: "Câu điều kiện"
+  },
+  {
+    value: AssignmentType.IndirectSpeech,
+    label: "Indirect Speech",
+    description: "Câu gián tiếp"
+  }
+];
+
+// Question Types Selector Component
+const QuestionTypesSelector: React.FC<{
+  selectedType: AssignmentType;
+  onChange: (type: AssignmentType) => void;
+}> = ({ selectedType, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleDropdown = () => setIsOpen(!isOpen);
+
+  const selectQuestionType = (type: AssignmentType) => {
+    onChange(type);
+    setIsOpen(false); // Đóng dropdown sau khi chọn
+  };
+
+  // Tìm label của loại câu hỏi đã chọn
+  const selectedTypeLabel = questionTypeOptions.find(opt => opt.value === selectedType)?.label || 'Chọn dạng câu hỏi';
+
+  return (
+    <div className="w-full space-y-2">
+      <div className="relative">
+        <button
+          type="button"
+          className="flex justify-between items-center w-full p-3 text-left border rounded-md bg-white dark:bg-gray-800 dark:border-gray-700"
+          onClick={toggleDropdown}
+        >
+          <span className="text-gray-700 dark:text-gray-300">
+            {selectedTypeLabel}
+          </span>
+          {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-10 w-full mt-1 border rounded-md shadow-lg bg-white dark:bg-gray-800 dark:border-gray-700">
+            {questionTypeOptions.map((option) => (
+              <div
+                key={option.value}
+                className={`flex items-center space-x-2 p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${selectedType === option.value ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  }`}
+                onClick={() => selectQuestionType(option.value)}
+              >
+                <div>
+                  <p className="font-medium dark:text-white">
+                    {option.label}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{option.description}</p>
+                </div>
+                {selectedType === option.value && (
+                  <div className="ml-auto w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                    <span className="text-white text-xs">✓</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Exercises: React.FC = () => {
-  const navigate = useNavigate();
-  const { success, error } = useToast();
+  const { toast } = useToast();
   const [showExercise, setShowExercise] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(1);
-  const [totalQuestions, setTotalQuestions] = useState(10);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState('9:49');
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
   const [topic, setTopic] = useState('');
-  const [questionCount, setQuestionCount] = useState('10');
-  const [exerciseType, setExerciseType] = useState('');
+  const [totalQuestions, setTotalQuestions] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [exerciseSet, setExerciseSet] = useState<ExerciseSet | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [submissionResult, setSubmissionResult] = useState<{
+    score: number;
+    totalQuestions: number;
+    correctAnswers: number;
+    feedback: string;
+  } | null>(null);
 
-  const handleCreateExercise = async () => {
-    if (!topic.trim()) {
-      error('Vui lòng nhập chủ đề', 'Chủ đề không được để trống');
-      return;
+  // Thay đổi từ mảng sang giá trị đơn
+  const [selectedQuestionType, setSelectedQuestionType] = useState<AssignmentType>(
+    AssignmentType.MostSuitableWord // Mặc định là loại 1 (MostSuitableWord)
+  );
+
+  // Timer effect
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showExercise && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      handleSubmitExercise();
     }
-    
-    if (!exerciseType) {
-      error('Vui lòng chọn dạng bài tập', 'Dạng bài tập không được để trống');
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      
-      const params: ExerciseParams = {
-        topic: topic.trim(),
-        questionCount: Number(questionCount),
-        exerciseType
-      };
-      
-      // For demo/development, use mock data to avoid API calls
-      // In production, uncomment the API call and remove mock data
-      
-      // const result = await exerciseService.generateExercise(params);
-      // setExerciseSet(result);
-      
-      // Mock data for development
-      setTimeout(() => {
-        const mockExerciseSet: ExerciseSet = {
-          id: '12345',
-          topic: params.topic,
-          questions: Array.from({ length: Number(questionCount) }).map((_, index) => ({
-            id: index + 1,
-            text: index === 0 ? "January is the first month of the ____." : `This is question ${index + 1} about ${params.topic}`,
-            options: ["day", "week", "year", "season"]
-          })),
-          timeLimit: 600 // 10 minutes
-        };
-        
-        setExerciseSet(mockExerciseSet);
-        setTotalQuestions(mockExerciseSet.questions.length);
-        setCurrentQuestion(1);
-        setShowExercise(true);
-        setIsLoading(false);
-        success('Đã tạo bài tập', 'Bài tập đã được tạo thành công');
-      }, 1500);
-      
-    } catch (err) {
-      console.error('Error creating exercise:', err);
-      error('Không thể tạo bài tập', 'Vui lòng thử lại sau');
-      setIsLoading(false);
-    }
+    return () => clearInterval(timer);
+  }, [showExercise, timeLeft]);
+
+  // Format time display
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
-  
-  const handleSelectAnswer = (questionId: number, answer: string) => {
+
+
+
+  const handleSelectAnswer = (answer: string) => {
     setSelectedAnswer(answer);
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
+    setAnswers(prev => ({ ...prev, [currentQuestion]: answer }));
   };
-  
+
   const goToNextQuestion = () => {
     if (currentQuestion < totalQuestions) {
       setCurrentQuestion(currentQuestion + 1);
       setSelectedAnswer(answers[currentQuestion + 1] || null);
     }
   };
-  
+
   const goToPreviousQuestion = () => {
     if (currentQuestion > 1) {
       setCurrentQuestion(currentQuestion - 1);
       setSelectedAnswer(answers[currentQuestion - 1] || null);
     }
   };
-  
-  const handleSubmitExercise = async () => {
-    if (!exerciseSet) return;
-    
+  // Trong hàm handleCreateExercise của component Exercises
+  const handleCreateExercise = async () => {
+    if (!topic.trim()) {
+      toast({
+        title: 'Vui lòng nhập chủ đề',
+        description: 'Chủ đề không được để trống',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      
-      // For demo/development, use mock data to avoid API calls
-      // In production, uncomment the API call and remove mock data
-      
-      // const result = await exerciseService.submitAnswers(exerciseSet.id, answers);
-      
-      // Mock data for development
-      setTimeout(() => {
-        setIsLoading(false);
-        success('Đã nộp bài', 'Bài tập đã được nộp thành công');
-        // Navigate to results page or show results here
-        // For now, just go back to exercise creation
-        setShowExercise(false);
-      }, 1000);
-      
+
+      // Đảm bảo định dạng request đúng cấu trúc
+      const params: ExerciseGenerationParams = {
+        Topic: topic.trim(),
+        AssignmentTypes: [selectedQuestionType],
+        EnglishLevel: 1,
+        TotalQuestions: totalQuestions
+      };
+
+      console.log('REQUEST FORMAT:');
+      console.log(JSON.stringify(params, null, 2));
+      console.log('EXPECTED REQUEST FORMAT:');
+      console.log(JSON.stringify({
+        "Topic": "Animals in the wild",
+        "AssignmentTypes": [1],
+        "EnglishLevel": 1,
+        "TotalQuestions": 10
+      }, null, 2));
+
+      const result = await exerciseService.generateExercise(params);
+
+      console.log('RECEIVED RESPONSE:');
+      console.log(JSON.stringify(result, null, 2));
+
+      // Kiểm tra kết quả trước khi sử dụng
+      if (result && result.Questions && Array.isArray(result.Questions)) {
+        setExerciseSet(result);
+        setTotalQuestions(result.Questions.length);
+        setCurrentQuestion(1);
+        setShowExercise(true);
+        setTimeLeft(600); // Reset timer
+        setSubmissionResult(null);
+        setAnswers({}); // Reset answers
+        toast({
+          title: 'Đã tạo bài tập',
+          description: 'Bài tập đã được tạo thành công',
+          variant: 'default'
+        });
+      } else {
+        console.error('Invalid exercise data structure:', result);
+        throw new Error('Invalid exercise data received');
+      }
+
     } catch (err) {
-      console.error('Error submitting exercise:', err);
-      error('Không thể nộp bài', 'Vui lòng thử lại sau');
+      console.error('Error creating exercise:', err);
+      toast({
+        title: 'Không thể tạo bài tập',
+        description: 'Vui lòng thử lại sau',
+        variant: 'destructive'
+      });
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const suggestedTopics = [
-    "Places in town",
-    "Numbers around me", 
-    "Favorite food",
-    "Animals I like", 
-    "Hobbies I enjoy"
-  ];
+  // Trong hàm handleSubmitExercise của component Exercises
+  const handleSubmitExercise = async () => {
+    if (!exerciseSet) return;
 
-  const exerciseTypes = [
-    { value: "most-suitable", label: "Most Suitable Word: Chọn từ thích hợp nhất" },
-    { value: "verb-conjugation", label: "Verb Conjugation: Chia động từ" },
-    { value: "conditional", label: "Conditional Sentences: Câu điều kiện" },
-    { value: "indirect-speech", label: "Indirect Speech: Câu gián tiếp" }
-  ];
+    try {
+      setIsLoading(true);
+
+      console.log('SUBMISSION DATA:');
+      console.log('Exercise Set:', JSON.stringify(exerciseSet, null, 2));
+      console.log('User Answers:', JSON.stringify(answers, null, 2));
+
+      const result = await exerciseService.submitAnswers(exerciseSet, answers);
+
+      console.log('SUBMISSION RESULT:');
+      console.log(JSON.stringify(result, null, 2));
+
+      setSubmissionResult(result);
+      setIsLoading(false);
+      setShowExercise(false);
+      toast({
+        title: 'Đã nộp bài',
+        description: 'Bài tập đã được nộp thành công',
+        variant: 'default'
+      });
+    } catch (err) {
+      console.error('Error submitting exercise:', err);
+      toast({
+        title: 'Không thể nộp bài',
+        description: 'Vui lòng thử lại sau',
+        variant: 'destructive'
+      });
+      setIsLoading(false);
+    }
+  };
+
+
 
   // Progress percentage calculation
   const progressPercentage = (currentQuestion / totalQuestions) * 100;
-  
+
   // Current question data
-  const question = exerciseSet?.questions[currentQuestion - 1] || {
-    id: 1,
-    text: "Loading question...",
-    options: []
+  const question = exerciseSet?.Questions?.[currentQuestion - 1] || {
+    Question: "Đang tải câu hỏi...",
+    Options: [],
+    ExplanationInVietnamese: ""
   };
 
+  // Render submission result
+  if (submissionResult) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-pink-50 to-pink-100 dark:from-gray-900 dark:to-gray-800">
+        <Header />
+        <main className="flex-1 container max-w-screen-md mx-auto py-8 px-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
+            <h2 className="text-3xl font-bold mb-6 dark:text-white">
+              Kết Quả Bài Tập
+            </h2>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 mb-6">
+              <p className="text-xl font-semibold dark:text-blue-200">
+                Điểm số: {submissionResult.score}%
+              </p>
+              <p className="text-gray-600 dark:text-gray-300 mt-2">
+                {submissionResult.correctAnswers} / {submissionResult.totalQuestions} câu
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {exerciseSet?.Questions.map((q, index) => (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg ${q.Options[q.RightOptionIndex] === answers[index + 1]
+                    ? 'bg-green-50 dark:bg-green-900/20'
+                    : 'bg-red-50 dark:bg-red-900/20'
+                    }`}
+                >
+                  <p className="font-medium mb-2 dark:text-white">{q.Question}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-gray-600 dark:text-gray-300">
+                      Đáp án đúng: {q.Options[q.RightOptionIndex]}
+                    </p>
+                    <p className="text-sm italic dark:text-gray-400">
+                      {q.ExplanationInVietnamese}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              className="w-full mt-6 py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+              onClick={() => {
+                setSubmissionResult(null);
+              }}
+            >
+              Quay lại tạo bài tập mới
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Main component return
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-pink-50 to-pink-100 dark:from-gray-900 dark:to-gray-800">
       <Header />
@@ -164,16 +361,16 @@ const Exercises: React.FC = () => {
                 <GraduationCap size={48} color="white" />
               </div>
             </div>
-            
+
             <h1 className="text-4xl font-bold text-center mb-2 dark:text-white">BÀI TẬP</h1>
             <p className="text-center text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
               Thiết lập bài tập phù hợp với nhu cầu học tập của bạn với các chủ đề và dạng bài tập đa dạng.
             </p>
-            
+
             <div className="space-y-6">
               <div className="mb-4">
                 <Label htmlFor="topic" className="text-gray-700 dark:text-gray-300 mb-2 block">Nhập chủ đề bài tập...</Label>
-                <Input 
+                <Input
                   id="topic"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
@@ -181,7 +378,7 @@ const Exercises: React.FC = () => {
                   className="text-lg py-6 dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
               </div>
-              
+
               <div className="mb-4">
                 <div className="flex items-center mb-2">
                   <Sparkles size={16} className="text-gray-600 dark:text-gray-400 mr-2" />
@@ -189,9 +386,9 @@ const Exercises: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {suggestedTopics.map((suggestedTopic, index) => (
-                    <Button 
+                    <Button
                       key={index}
-                      variant="outline" 
+                      variant="outline"
                       className="bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
                       onClick={() => setTopic(suggestedTopic)}
                     >
@@ -200,130 +397,106 @@ const Exercises: React.FC = () => {
                   ))}
                 </div>
               </div>
-              
+
+              <div className="mb-4">
+                <Label className="text-gray-700 dark:text-gray-300 mb-2 block">Loại câu hỏi</Label>
+                <QuestionTypesSelector
+                  selectedType={selectedQuestionType}
+                  onChange={setSelectedQuestionType}
+                />
+              </div>
+
               <div className="mb-4">
                 <Label htmlFor="questionCount" className="text-gray-700 dark:text-gray-300 mb-2 block">Số lượng câu hỏi</Label>
-                <Input 
+                <Input
                   id="questionCount"
-                  type="number" 
-                  value={questionCount}
-                  onChange={(e) => setQuestionCount(e.target.value)}
-                  min="5"
-                  max="50"
+                  type="number"
+                  min={5}
+                  max={20}
+                  value={totalQuestions}
+                  onChange={(e) => setTotalQuestions(parseInt(e.target.value) || 10)}
                   className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
               </div>
-              
-              <div className="mb-6">
-                <Label className="text-gray-700 dark:text-gray-300 mb-2 block">Chọn một hoặc nhiều dạng câu hỏi</Label>
-                <Select value={exerciseType} onValueChange={setExerciseType}>
-                  <SelectTrigger className="dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                    <SelectValue placeholder="Chọn dạng câu hỏi" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {exerciseTypes.map((type, index) => (
-                      <SelectItem key={index} value={type.value}>{type.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button 
-                className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 text-lg"
+
+              <Button
+                className="w-full py-6 text-lg font-semibold"
                 onClick={handleCreateExercise}
                 disabled={isLoading}
               >
-                <GraduationCap size={20} />
                 {isLoading ? 'Đang tạo bài tập...' : 'Tạo bài tập'}
               </Button>
             </div>
           </>
         ) : (
           // Exercise questions
-          <>
-            <div className="flex justify-between items-center mb-8">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <Button
+                variant="ghost"
+                className="text-gray-600 dark:text-gray-400"
                 onClick={() => setShowExercise(false)}
               >
-                <ArrowLeft size={18} />
+                <ArrowLeft className="mr-2" size={16} />
                 Quay lại
               </Button>
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-2 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-              >
-                <Copy size={18} />
-                Sao chép
-              </Button>
-            </div>
-
-            <Card className="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-4 p-4">
-              <div className="flex justify-between items-center mb-2">
-                <div className="font-medium text-gray-700 dark:text-gray-300">
-                  Câu {currentQuestion}/{totalQuestions}
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <Clock size={16} />
-                  {timeLeft}
-                </div>
+              <div className="flex items-center text-gray-600 dark:text-gray-400">
+                <Clock size={16} className="mr-1" />
+                <span>{formatTime(timeLeft)}</span>
               </div>
-              
-              <Progress value={progressPercentage} className="h-2 bg-gray-200 dark:bg-gray-700" />
-            </Card>
+            </div>
 
             <div className="mb-6">
-              <Card className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mb-4">
-                <h3 className="text-xl font-medium text-gray-800 dark:text-white mb-6">
-                  {question.text}
-                </h3>
-                
-                <div className="space-y-3">
-                  {question.options.map((option, index) => (
-                    <button
-                      key={index}
-                      className={`w-full text-left p-4 rounded-lg transition-colors ${
-                        selectedAnswer === option 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-engace-pink' 
-                          : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                      onClick={() => handleSelectAnswer(question.id, option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              <div className="flex justify-between">
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                  onClick={goToPreviousQuestion}
-                  disabled={currentQuestion === 1}
-                >
-                  Câu trước
-                </Button>
-                <Button 
-                  className="flex items-center gap-2 bg-engace-pink hover:bg-engace-pink/90 px-6"
-                  onClick={goToNextQuestion}
-                  disabled={currentQuestion === totalQuestions}
-                >
-                  Câu tiếp
-                  <ArrowRight size={18} />
-                </Button>
+              <Progress value={progressPercentage} className="h-2" />
+              <div className="flex justify-between mt-2 text-sm text-gray-600 dark:text-gray-400">
+                <span>Câu {currentQuestion}/{totalQuestions}</span>
+                <span>{Math.round(progressPercentage)}%</span>
               </div>
             </div>
 
-            <Button 
-              className="w-full py-6 bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-500 rounded-xl flex items-center justify-center gap-2 text-lg"
-              onClick={handleSubmitExercise}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Đang xử lý...' : 'Nộp bài ngay'}
-            </Button>
-          </>
+            <Card className="p-6 mb-6">
+              <h3 className="text-xl font-semibold mb-4 dark:text-white">{question.Question}</h3>
+              <div className="space-y-3">
+                {Array.isArray(question.Options) && question.Options.map((option, index) => (
+                  <div
+                    key={index}
+                    className={`p-3 border rounded-md cursor-pointer transition-colors ${selectedAnswer === option
+                      ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/30 dark:border-blue-400'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    onClick={() => handleSelectAnswer(option)}
+                  >
+                    <p className="dark:text-white">{option}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={goToPreviousQuestion}
+                disabled={currentQuestion === 1}
+              >
+                <ArrowLeft className="mr-2" size={16} />
+                Câu trước
+              </Button>
+
+              {currentQuestion < totalQuestions ? (
+                <Button onClick={goToNextQuestion}>
+                  Câu tiếp
+                  <ArrowRight className="ml-2" size={16} />
+                </Button>
+              ) : (
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={handleSubmitExercise}
+                >
+                  Nộp bài
+                </Button>
+              )}
+            </div>
+          </div>
         )}
       </main>
     </div>

@@ -1,11 +1,19 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Paperclip } from 'lucide-react';
+import { MessageSquare, Send, Paperclip, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { consultationService, Message } from '@/services/consultationService';
+// Import chỉ sử dụng một service - consultationService
+import { chatService, ChatMessage } from '@/services/consultationService';
+
+// Định nghĩa interface Message cho UI
+interface Message {
+  id: number;
+  content: string;
+  isUser: boolean;
+  timestamp: string;
+}
 
 const Consultation: React.FC = () => {
   const { success, error } = useToast();
@@ -14,41 +22,62 @@ const Consultation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Cài đặt người dùng cố định
+  const userSettings = {
+    username: 'Cong',
+    gender: 'Nam',
+    age: 19,
+    englishLevel: 1,
+    enableReasoning: false,
+    enableSearching: false
+  };
+
   // Load initial messages
   useEffect(() => {
     const loadInitialMessages = async () => {
       try {
         setIsLoading(true);
-        
-        // In a real-world scenario with actual API:
-        // const history = await consultationService.getConversationHistory();
-        // if (history.length > 0) {
-        //   setMessages(history[0].messages);
-        // } else {
-        //   // Set default welcome message
-        //   setMessages([defaultWelcomeMessage]);
-        // }
-        
-        // Mock data for development
-        setTimeout(() => {
-          setMessages([
+
+        // Load conversation from localStorage
+        const savedChatHistory = chatService.loadConversation();
+
+        if (savedChatHistory.length > 0) {
+          // Convert saved chat history to our Message format
+          const formattedMessages = savedChatHistory.map((chatMsg, index) => ({
+            id: index + 1,
+            content: chatMsg.Message,
+            isUser: chatMsg.FromUser,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+
+          setMessages(formattedMessages);
+        } else {
+          // Set default welcome message
+          const welcomeMessage: Message = {
+            id: 1,
+            content: 'Chào! Mình là CDKAce, trợ lý ảo được thiết kế riêng để hỗ trợ bạn học tiếng Anh nè. 😊\n\nMình luôn cố gắng hỗ trợ bạn tốt nhất, nhưng đôi khi vẫn có thể mắc sai sót, nên bạn nhớ kiểm tra lại những thông tin quan trọng nha!',
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+
+          setMessages([welcomeMessage]);
+
+          // Save welcome message to localStorage
+          chatService.saveConversation([
             {
-              id: 1,
-              content: 'Chào! Mình là CDKAce, trợ lý ảo được thiết kế riêng để hỗ trợ bạn học tiếng Anh nè. 😊\n\nMình luôn cố gắng hỗ trợ bạn tốt nhất, nhưng đôi khi vẫn có thể mắc sai sót, nên bạn nhớ kiểm tra lại những thông tin quan trọng nha!',
-              isUser: false,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              FromUser: false,
+              Message: welcomeMessage.content
             }
           ]);
-          setIsLoading(false);
-        }, 1000);
-        
+        }
       } catch (err) {
         console.error('Error loading conversation history:', err);
         error('Không thể tải lịch sử trò chuyện', 'Vui lòng thử lại sau');
+      } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadInitialMessages();
   }, [error]);
 
@@ -59,39 +88,77 @@ const Consultation: React.FC = () => {
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    
-    const newMessage: Message = {
+
+    // Create new user message
+    const newUserMessage: Message = {
       id: Date.now(),
       content: message,
       isUser: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    
-    setMessages(prev => [...prev, newMessage]);
+
+    // Add user message to the UI
+    setMessages(prev => [...prev, newUserMessage]);
+
+    // Clear input field
     setMessage('');
+
+    // Prepare for API request
     setIsLoading(true);
-    
+
     try {
-      // In a real-world scenario with actual API:
-      // const response = await consultationService.sendMessage(message.trim());
-      // setMessages(prev => [...prev, response]);
-      
-      // Mock response for development
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: Date.now() + 1,
-          content: 'Cảm ơn bạn đã nhắn tin! Tôi rất vui được hỗ trợ bạn học tiếng Anh. Bạn có thể hỏi tôi bất kỳ câu hỏi nào về ngữ pháp, từ vựng, hoặc cách diễn đạt. Tôi sẽ cố gắng giúp bạn hiểu rõ hơn về tiếng Anh.',
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        
-        setMessages(prev => [...prev, botResponse]);
-        setIsLoading(false);
-      }, 1500);
-      
+      // Convert current message history to format expected by API
+      const chatHistory: ChatMessage[] = messages.map(msg => ({
+        FromUser: msg.isUser,
+        Message: msg.content
+      }));
+
+      // Add the new user message to chat history
+      chatHistory.push({
+        FromUser: true,
+        Message: newUserMessage.content
+      });
+
+      // Create request object
+      const request = {
+        ChatHistory: chatHistory,
+        Question: newUserMessage.content,
+        ImagesAsBase64: null
+      };
+
+      // Send request to API
+      const response = await chatService.generateAnswer(
+        request,
+        userSettings.username,
+        userSettings.gender,
+        userSettings.age,
+        userSettings.englishLevel,
+        userSettings.enableReasoning,
+        userSettings.enableSearching
+      );
+
+      // Create bot response message
+      const botResponse: Message = {
+        id: Date.now() + 1,
+        content: response,
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      // Add bot response to UI
+      setMessages(prev => [...prev, botResponse]);
+
+      // Save updated conversation to localStorage
+      const updatedChatHistory = [
+        ...chatHistory,
+        { FromUser: false, Message: botResponse.content }
+      ];
+      chatService.saveConversation(updatedChatHistory);
+
     } catch (err) {
       console.error('Error sending message:', err);
       error('Không thể gửi tin nhắn', 'Vui lòng thử lại sau');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -106,28 +173,30 @@ const Consultation: React.FC = () => {
   const handleClearConversation = async () => {
     try {
       setIsLoading(true);
-      
-      // In a real-world scenario with actual API:
-      // await consultationService.clearConversation();
-      
-      // For development
-      setTimeout(() => {
-        setMessages([
-          {
-            id: Date.now(),
-            content: 'Cuộc trò chuyện đã được làm mới. Bạn có thể bắt đầu cuộc trò chuyện mới!',
-            isUser: false,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
-        
-        setIsLoading(false);
-        success('Đã xóa cuộc trò chuyện', 'Cuộc trò chuyện đã được làm mới');
-      }, 500);
-      
+
+      // Clear conversation in localStorage
+      chatService.clearConversation();
+
+      // Add new welcome message
+      const welcomeMessage: Message = {
+        id: Date.now(),
+        content: 'Cuộc trò chuyện đã được làm mới. Bạn có thể bắt đầu cuộc trò chuyện mới!',
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages([welcomeMessage]);
+
+      // Save welcome message to localStorage
+      chatService.saveConversation([
+        { FromUser: false, Message: welcomeMessage.content }
+      ]);
+
+      success('Đã xóa cuộc trò chuyện', 'Cuộc trò chuyện đã được làm mới');
     } catch (err) {
       console.error('Error clearing conversation:', err);
       error('Không thể xóa cuộc trò chuyện', 'Vui lòng thử lại sau');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -144,29 +213,29 @@ const Consultation: React.FC = () => {
               </div>
               <h2 className="font-semibold text-lg">Tư vấn với CDKAce</h2>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="text-red-500 hover:text-red-600 hover:bg-red-50"
               onClick={handleClearConversation}
               disabled={isLoading}
             >
-              Xóa cuộc trò chuyện
+              <RefreshCw size={16} className="mr-2" />
+              Làm mới
             </Button>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map(msg => (
-              <div 
-                key={msg.id} 
+              <div
+                key={msg.id}
                 className={`max-w-3xl ${msg.isUser ? 'ml-auto' : ''}`}
               >
-                <div 
-                  className={`rounded-2xl p-4 ${
-                    msg.isUser 
-                      ? 'bg-blue-100 text-right' 
+                <div
+                  className={`rounded-2xl p-4 ${msg.isUser
+                      ? 'bg-blue-100 text-right'
                       : 'bg-orange-100'
-                  }`}
+                    }`}
                 >
                   <p className="whitespace-pre-line">{msg.content}</p>
                 </div>
@@ -188,12 +257,12 @@ const Consultation: React.FC = () => {
             )}
             <div ref={messagesEndRef} />
           </div>
-          
+
           <div className="border-t p-4">
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <Input
-                  placeholder="Shift + Enter để xuống dòng"
+                  placeholder="Nhập tin nhắn của bạn..."
                   className="pr-10 py-6 rounded-xl"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -204,7 +273,7 @@ const Consultation: React.FC = () => {
                   <Paperclip size={20} className="text-gray-400" />
                 </Button>
               </div>
-              <Button 
+              <Button
                 className="bg-engace-orange hover:bg-engace-orange/90 rounded-xl px-4"
                 onClick={handleSendMessage}
                 disabled={isLoading || !message.trim()}
@@ -216,11 +285,19 @@ const Consultation: React.FC = () => {
               <Button variant="outline" className="flex-1 mr-2">
                 Đính kèm ảnh
               </Button>
-              <Button variant="outline" className="flex-1 mr-2">
+              <Button
+                variant="outline"
+                className="flex-1 mr-2"
+                disabled={isLoading}
+              >
                 Suy luận sâu
               </Button>
-              <Button variant="outline" className="flex-1">
-                Tìm kiếm trên Google
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={isLoading}
+              >
+                Tìm kiếm web
               </Button>
             </div>
           </div>

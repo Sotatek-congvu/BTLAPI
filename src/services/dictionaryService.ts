@@ -1,4 +1,3 @@
-
 import { apiService } from './api';
 
 export interface WordDefinition {
@@ -28,36 +27,53 @@ interface ApiResponse<T> {
 
 export const dictionaryService = {
   // Search for a word
-  searchWord: async (keyword: string): Promise<WordDefinition | string | null> => {
+  searchWord: async (keyword: string): Promise<string | WordDefinition | null> => {
+    console.log('DictionaryService: Searching for word:', keyword);
+
     try {
+      console.log('API URL:', `${apiService.getBaseUrl()}/api/Dictionary/Search?keyword=${encodeURIComponent(keyword)}`);
+      console.log('Headers:', apiService.getHeaders());
+
       // Get the raw response first
       const response = await fetch(`${apiService.getBaseUrl()}/api/Dictionary/Search?keyword=${encodeURIComponent(keyword)}`, {
         method: 'GET',
         headers: apiService.getHeaders(),
       });
-      
+
+      console.log('Response status:', response.status);
+      console.log('Response status text:', response.statusText);
+      console.log('Content-Type:', response.headers.get('content-type'));
+
       if (!response.ok) {
+        console.error('Error response:', response);
         throw new Error(`Server responded with status: ${response.status}`);
       }
-      
+
       // Check the content type to determine how to process the response
       const contentType = response.headers.get('content-type');
-      
+      console.log('Content type:', contentType);
+
+      let result;
       if (contentType && contentType.includes('application/json')) {
         // If it's JSON, parse it as JSON
         const jsonData = await response.json();
-        return jsonData.data || jsonData;
+        console.log('JSON response:', jsonData);
+        result = jsonData.data || jsonData;
       } else {
         // If it's not JSON, treat it as text
         const textData = await response.text();
-        return textData;
+        console.log('Text response (first 100 chars):', textData.substring(0, 100) + '...');
+        result = textData;
       }
+
+      console.log('Final processed result type:', typeof result);
+      return result;
     } catch (error) {
       console.error('Error searching word:', error);
       throw error;
     }
   },
-  
+
   // Get search history
   getSearchHistory: async (): Promise<SearchHistoryItem[]> => {
     try {
@@ -68,12 +84,12 @@ export const dictionaryService = {
       throw error;
     }
   },
-  
+
   // Add word to favorites
   addToFavorites: async (word: string): Promise<{ success: boolean }> => {
     try {
       const response = await apiService.post<ApiResponse<{ success: boolean }>>(
-        '/api/Dictionary/Favorites', 
+        '/api/Dictionary/Favorites',
         { word }
       );
       return (response as ApiResponse<{ success: boolean }>).data || { success: true };
@@ -82,7 +98,7 @@ export const dictionaryService = {
       throw error;
     }
   },
-  
+
   // Get favorite words
   getFavorites: async (): Promise<string[]> => {
     try {
@@ -93,7 +109,7 @@ export const dictionaryService = {
       throw error;
     }
   },
-  
+
   // Remove word from favorites
   removeFromFavorites: async (word: string): Promise<{ success: boolean }> => {
     try {

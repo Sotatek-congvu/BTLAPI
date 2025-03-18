@@ -1,13 +1,9 @@
-
 // Base API service for making HTTP requests
 class ApiService {
   private baseUrl: string;
-  private authToken: string | null = null;
-  
+
   constructor(baseUrl: string = import.meta.env.VITE_API_URL || 'https://localhost:5000') {
     this.baseUrl = baseUrl;
-    // Try to get auth token from localStorage if it exists
-    this.authToken = localStorage.getItem('auth_token');
   }
 
   // Get the base URL
@@ -15,45 +11,22 @@ class ApiService {
     return this.baseUrl;
   }
 
-  // Get headers with optional authentication
+  // Get headers
   getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+    return {
       'Content-Type': 'application/json',
     };
-
-    if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`;
-    }
-
-    return headers;
-  }
-
-  // Set authentication token
-  setAuthToken(token: string) {
-    this.authToken = token;
-    localStorage.setItem('auth_token', token);
-  }
-
-  // Clear authentication token
-  clearAuthToken() {
-    this.authToken = null;
-    localStorage.removeItem('auth_token');
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      
+
       // Default headers
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...options.headers,
       };
-
-      // Add auth token if available
-      if (this.authToken) {
-        headers['Authorization'] = `Bearer ${this.authToken}`;
-      }
 
       const response = await fetch(url, {
         ...options,
