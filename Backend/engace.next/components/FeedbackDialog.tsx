@@ -11,12 +11,12 @@ interface FeedbackDialogProps {
   userName: string;
 }
 
-const feedbackPlaceholder = `• Bạn đã sử dụng EngAce trong bao lâu?
-• Bạn thích điều gì nhất về EngAce?
-• EngAce hỗ trợ bạn học tập có hiệu quả không?
+const feedbackPlaceholder = `• Bạn đã sử dụng DCK trong bao lâu?
+• Bạn thích điều gì nhất về DCK?
+• DCK hỗ trợ bạn học tập có hiệu quả không?
 • Bạn muốn cải thiện tính năng nào và cải thiện như thế nào?
 • Nội dung học tập có phù hợp với trình độ của bạn không?
-• Bạn gặp khó khăn gì khi sử dụng EngAce?
+• Bạn gặp khó khăn gì khi sử dụng DCK?
 • Bạn muốn thêm tính năng gì mới?
 • Giao diện người dùng có dễ sử dụng không?
 • . . .`;
@@ -113,7 +113,7 @@ export default function FeedbackDialog({
           <div className="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-center">
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                Phản hồi của bạn về EngAce
+                Phản hồi của bạn về DCK
               </h2>
               <button
                 onClick={onClose}

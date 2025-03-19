@@ -385,7 +385,7 @@ export default function DictionaryPage() {
               </h2>
               <div className="space-y-4 text-slate-600 dark:text-slate-300">
                 <p>
-                  Từ điển thông minh của EngAce được thiết kế đặc biệt cho người
+                  Từ điển thông minh của DCK được thiết kế đặc biệt cho người
                   học tiếng Anh, cung cấp:
                 </p>
                 <ul className="list-disc ml-6 space-y-2">

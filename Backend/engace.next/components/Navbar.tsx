@@ -45,7 +45,7 @@ export default function Navbar() {
                 onClick={() => router.push("/dashboard")}
                 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400 hover:opacity-80 transition-opacity"
               >
-                EngAce
+                DCK
               </button>
               <span className="text-sm text-slate-600 dark:text-slate-400">
                 |
@@ -75,7 +75,7 @@ export default function Navbar() {
                 onClick={() => router.push("/dashboard")}
                 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400"
               >
-                EngAce
+                DCK
               </button>
             </div>
 
@@ -178,7 +178,7 @@ export default function Navbar() {
                   <div className="flex items-center space-x-2">
                     <Info className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                     <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                      Thông tin về EngAce
+                      Thông tin về DCK
                     </span>
                   </div>
                 </button>

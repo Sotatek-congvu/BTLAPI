@@ -1,0 +1,166 @@
+[33mcommit f4b9d39ce15ebbf38f3e3e6fe0ab0b4df8af18e7[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: Nekine <kien12045@gmail.com>
+Date:   Tue Mar 18 16:17:28 2025 +0700
+
+    đẩy backend lên (trong backend có cả frontend cũ)
+
+[33mcommit 4749b6e0bfac6b9e12f3a61bb4cf4de486ff6d48[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Sotatek-congvu <cong.vu@sotatek.com>
+Date:   Tue Mar 18 13:24:42 2025 +0700
+
+    update
+
+[33mcommit 8adc421c2d107d0b4a277636d2f1d45c1998a7ba[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Mon Mar 17 06:20:24 2025 +0000
+
+    Implement remaining features
+    
+    Implement exercise generation, consultation, and writing practice features based on provided API.
+
+[33mcommit 4055cea2623a8574bd30a2f7f534cd141a67bea6[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Mon Mar 17 06:14:10 2025 +0000
+
+    Fix: Resolve Typescript errors
+    
+    Fixes Typescript errors in dictionaryService.ts related to accessing the 'data' property on an unknown type.
+
+[33mcommit e3ea84e6667370a27337eade607203a3e7225aba[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Mon Mar 17 06:13:04 2025 +0000
+
+    Document API endpoints
+    
+    Document the project's API endpoints.
+
+[33mcommit f88b2836a7a06ba0423696c5a4c273b1c350551a[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Mon Mar 17 06:01:06 2025 +0000
+
+    Implement dictionary result UI
+    
+    Implement the UI for displaying dictionary search results.
+
+[33mcommit 2db86ef998f8e5d9e723224970c919cc6e0d0185[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Mon Mar 17 05:57:13 2025 +0000
+
+    Reference local API endpoint
+    
+    Referenced a local API endpoint for dictionary search with the keyword "hello".
+
+[33mcommit c8c8eb1481fd349f53986dfaac901fb66f9b7dd7[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Mon Mar 17 05:53:55 2025 +0000
+
+    Expose API feedback endpoints
+    
+    This commit exposes four new API endpoints for receiving feedback on dictionary items, exercises, writing practices, and consultations.
+
+[33mcommit 0317ba7d2a295c761b9627ac9b8fabf4f10df7ee[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Sun Mar 16 06:14:30 2025 +0000
+
+    Fix invalid characters in HelpModal
+    
+    The characters ">" were causing a TypeScript error. Replacing them with "&gt;" resolves the issue.
+
+[33mcommit db6b55f78b40a4832581d1419952f314c2632df0[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Sun Mar 16 06:13:00 2025 +0000
+
+    Design server interaction methods
+    
+    This commit designs methods for interacting with the server to receive feedback for requests.
+
+[33mcommit a97553347088edc1f82aa7bc2fca1f94e3134840[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Sun Mar 16 06:01:20 2025 +0000
+
+    Update logo and UI details
+    
+    Update the logo to CDKAce, enhance the user profile modal with edit and settings options, and add more details to the help modal.
+
+[33mcommit 550d74425ea1988260f2b31da7f0268a32f5fdc6[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Sat Mar 15 07:02:35 2025 +0000
+
+    Implement exercise creation interface
+    
+    This commit implements the user interface for creating exercises, accessible after clicking the "Bài tập" item and then the "Tạo bài tập" button.
+
+[33mcommit dc456a68bdab5a321d84bc4db5a0ba8ea7d364bb[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Sat Mar 15 06:59:58 2025 +0000
+
+    Fix writing practice feedback display
+    
+    The feedback interface should only be displayed after submitting the writing.
+
+[33mcommit d42c9bc6ffd6e4e667190d9662e4854fffb191b8[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Sat Mar 15 06:53:31 2025 +0000
+
+    Update exercise and writing pages
+
+[33mcommit 49fdfc1910f7d66c05cb33f8a878671b6216bb15[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 15:01:22 2025 +0000
+
+    Document dictionary search interface
+
+[33mcommit 7eb5bab8cb88b611ddca04acd38b58a1153c9469[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:44:28 2025 +0000
+
+    Implement theme mode
+    
+    Adds functionality for light and dark theme modes.
+
+[33mcommit 3d16e407b3507503ccd19584a0f82003219a0cf6[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:35:17 2025 +0000
+
+    Make feature cards clickable
+    
+    The feature cards on the index page should navigate to different pages when clicked.
+
+[33mcommit 5ef1d7761e0d96af1b22800bf5ed55c15f463977[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:33:19 2025 +0000
+
+    Fix type error in FeatureCard
+    
+    The FeatureCard component was missing the onClick prop type, causing a type error in the Index page. This commit adds the onClick prop to the FeatureCardProps interface.
+
+[33mcommit dcf99fed389650cd7ea28cf28081a264ce64e8d9[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:32:04 2025 +0000
+
+    Implement header modals
+    
+    Implement modals for header icons.
+
+[33mcommit 758bc7a8b1c961a13b684393cd3ac8927f261ec8[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:22:57 2025 +0000
+
+    Fix Tailwind CSS font error
+    
+    The `font-inter` class was not recognized by Tailwind CSS. This commit ensures that the Inter font is correctly applied by addressing the Tailwind configuration.
+
+[33mcommit ba421002c3bc0fba432c3ee6445c6e50329a1683[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:21:59 2025 +0000
+
+    Implement web interface
+    
+    Implement the web interface as per the provided image.
+
+[33mcommit 98634cd6b5e474b3acba2a2e545540f4a783214b[m
+Author: gpt-engineer-app[bot] <159125892+gpt-engineer-app[bot]@users.noreply.github.com>
+Date:   Fri Mar 14 13:20:44 2025 +0000
+
+    Use tech stack vite_react_shadcn_ts
+    [skip gpt_engineer]

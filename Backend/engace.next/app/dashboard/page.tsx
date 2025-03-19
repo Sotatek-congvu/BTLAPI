@@ -161,7 +161,7 @@ export default function Dashboard() {
 
 ---
 
-Cập nhật vào lúc **${formatUpdateDate(updateInfo.Date)}**. Thông tin chi tiết tại [**ĐÂY**](https://github.com/phanxuanquang/EngAce/commit/${updateInfo.ShaCode}).
+Cập nhật vào lúc **${formatUpdateDate(updateInfo.Date)}**. Thông tin chi tiết tại [**ĐÂY**](Hem cóa đâu bé iu).
         `.trim() : ""}
         showGithubButton={true}
       />
